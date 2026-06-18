@@ -1,0 +1,61 @@
+// ============================================================
+// d1.ts — Shared D1-read helper for D1-first tools.
+//
+// Hits st-backend.internal's `/api/sql/read` (SELECT/WITH only, enforced
+// server-side AND here for defense-in-depth). All D1-first tools should
+// import { readD1 } and call it directly — no per-tool fetch boilerplate.
+//
+// Response shape from st-backend.internal /api/sql/read:
+//   { success: true,  results: Row[], meta: D1Meta }
+//   { success: false, error: string }
+// ============================================================
+
+import type { Env } from './env';
+
+export interface D1ReadResult<Row = Record<string, unknown>> {
+  rows: Row[];
+  meta?: unknown;
+}
+
+/**
+ * Run a parameterized SELECT/WITH against st-backend.internal's D1.
+ *
+ * @throws if the SQL fails the SELECT/WITH gate or if the proxy returns
+ *         non-2xx / `success: false`.
+ */
+export async function readD1<Row = Record<string, unknown>>(
+  env: Env,
+  sql: string,
+  params: unknown[] = [],
+): Promise<D1ReadResult<Row>> {
+  const trimmed = sql.trim();
+  if (!/^(SELECT|WITH)\b/i.test(trimmed)) {
+    throw new Error('readD1: only SELECT/WITH statements are permitted');
+  }
+
+  const resp = await env.ST_PROXY.fetch('https://st-backend.internal/api/sql/read', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Sync-Key': env.MCP_SYNC_KEY,
+    },
+    body: JSON.stringify({ sql: trimmed, params }),
+  });
+
+  // the data backend returns { success:false, error } as a JSON body even on a 500
+  // (e.g. "no such column: name"). Parse the body BEFORE deciding to throw so
+  // the real D1 error is surfaced instead of an opaque "proxy returned 500".
+  const data = (await resp.json().catch(() => null)) as {
+    success?: boolean;
+    results?: Row[];
+    meta?: unknown;
+    error?: string;
+  } | null;
+
+  if (!resp.ok || !data || !data.success) {
+    const detail = data?.error ?? `proxy returned ${resp.status}`;
+    throw new Error(`readD1: ${detail}`);
+  }
+
+  return { rows: data.results ?? [], meta: data.meta };
+}

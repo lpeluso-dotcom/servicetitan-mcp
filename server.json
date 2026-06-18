@@ -1,0 +1,24 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
+  "name": "io.github.lpeluso-dotcom/servicetitan-mcp",
+  "description": "Unofficial enterprise-grade MCP server for the ServiceTitan API — 76 read/write tools over Streamable HTTP, with OAuth, a dryRun→confirm write-gate, audit logging, and rate limiting.",
+  "version": "1.0.0",
+  "repository": {
+    "url": "https://github.com/lpeluso-dotcom/servicetitan-mcp",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://<your-worker-subdomain>.workers.dev/mcp",
+      "headers": [
+        {
+          "name": "X-Sync-Key",
+          "description": "Inbound auth token matching the worker's MCP_SYNC_KEY secret",
+          "isSecret": true,
+          "isRequired": true
+        }
+      ]
+    }
+  ]
+}

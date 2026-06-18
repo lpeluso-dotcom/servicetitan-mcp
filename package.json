@@ -1,0 +1,38 @@
+{
+  "name": "servicetitan-mcp",
+  "version": "1.0.0",
+  "description": "Enterprise-grade Model Context Protocol (MCP) server for the ServiceTitan API — a Cloudflare Worker exposing 76 read/write tools over Streamable HTTP with OAuth, a dryRun→confirm write-gate, audit logging, and adaptive rate limiting. Unofficial, community-maintained.",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "servicetitan",
+    "cloudflare-workers",
+    "claude",
+    "ai-tools"
+  ],
+  "scripts": {
+    "check": "npm run typecheck && npm test",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "types": "wrangler types",
+    "security:audit": "npm audit --omit=dev"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "agents": "^0.13.2",
+    "hono": "^4.12.23",
+    "jose": "^6.2.3",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260525.1",
+    "typescript": "^5.7.3",
+    "vitest": "^4.1.7",
+    "wrangler": "^4.94.0"
+  }
+}

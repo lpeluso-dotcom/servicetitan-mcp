@@ -1,0 +1,60 @@
+name = "servicetitan-mcp"
+main = "src/index.ts"
+compatibility_date = "2026-04-12"
+compatibility_flags = ["nodejs_compat"]
+
+# Smart Placement keeps the worker near its D1 database.
+placement = { mode = "smart" }
+
+[observability]
+enabled = true
+
+[vars]
+MCP_SERVICE_VERSION = "1.0.0"
+# Your ServiceTitan tenant id.
+ST_TENANT_ID = "000000000"
+# ServiceTitan API environment: "production" (default) or "integration".
+ST_ENV = "production"
+# Write-gate: "on" (default) requires dryRun→confirm for writes; "off" lets
+# writes execute in a single call. Leave on unless you trust the caller.
+WRITE_GATE = "on"
+
+# ── Required: this worker's own D1 (audit_log, error_log, mcp_roles,
+#    confirmation_tokens, mcp_cache). Create one and paste its id:
+#    wrangler d1 create servicetitan-mcp  →  apply migrations:  wrangler d1 migrations apply servicetitan-mcp
+[[d1_databases]]
+binding = "DB"
+database_name = "servicetitan-mcp"
+database_id = "00000000-0000-0000-0000-000000000000"
+
+# ── Required: Durable Objects for adaptive rate limiting + composite fanout dedup.
+[[durable_objects.bindings]]
+name = "ST_RATE_LIMITER"
+class_name = "StRateLimiter"
+
+[[durable_objects.bindings]]
+name = "CUSTOMER_SNAPSHOT_FLIGHT"
+class_name = "CustomerSnapshotSingleflight"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["StRateLimiter", "CustomerSnapshotSingleflight"]
+
+# ── Optional: Analytics Engine for p50/p95/p99 latency + error-rate timeseries.
+#    Uncomment to enable richer metrics (the /admin/metrics route works without it).
+# [[analytics_engine_datasets]]
+# binding = "MCP_METRICS"
+# dataset = "servicetitan_mcp_metrics"
+
+# ── Optional: KV for liveness heartbeats. Uncomment + paste a namespace id to enable.
+# [[kv_namespaces]]
+# binding = "PROXY_STATE"
+# id = "00000000000000000000000000000000"
+
+# ── Secrets (set with `wrangler secret put <NAME>`):
+#   ST_CLIENT_ID       - ServiceTitan app client id   (Developer Portal → Settings → API Application)
+#   ST_CLIENT_SECRET   - ServiceTitan app client secret
+#   ST_APP_KEY         - ServiceTitan app key
+#   MCP_SYNC_KEY       - inbound auth: clients send this as the X-Sync-Key header
+#   JWT_SECRET         - optional: HS256 secret if you prefer JWT client auth
+#   ST_WEBHOOK_SECRET  - optional: HMAC secret for POST /webhooks/st
